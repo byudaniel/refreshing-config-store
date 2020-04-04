@@ -1,0 +1,17 @@
+{
+  "name": "refreshing-config-store",
+  "version": "0.1.0",
+  "description": "",
+  "main": "ConfigStore.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Daniel O'Neill",
+  "license": "ISC",
+  "dependencies": {
+    "debounce-promise": "^3.1.2",
+    "node-cache": "^5.1.0",
+    "promise-retry": "^1.1.1"
+  }
+}
