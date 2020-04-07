@@ -20,7 +20,7 @@ function debounceConfigResolvers(configResolvers) {
     }
     configResolvers[key] = {
       resolver: debouncedResolver,
-      mapper: configResolvers[key].mapper
+      mapper: configResolvers[key].mapper,
     }
   })
 
@@ -33,7 +33,7 @@ class ConfigStore extends EventEmitter {
     configResolvers,
     defaultTtl = DEFAULT_KEY_TTL,
     keyCheckPeriod,
-    keyRefreshRetries = 10
+    keyRefreshRetries = 10,
   }) {
     super()
     this.keyTtl = defaultTtl
@@ -43,15 +43,27 @@ class ConfigStore extends EventEmitter {
     this.cache = new NodeCache({
       deleteOnExpire: false,
       stdTTL: this.keyTtl,
-      checkperiod: this.keyTtl / 3
+      checkperiod: this.keyTtl / 3,
     })
     this.staticConfig = staticConfig || {}
     this.configResolvers = debounceConfigResolvers(configResolvers)
 
-    this.cache.on('expired', key => {
+    this.cache.on('expired', (key) => {
       if (configResolvers[key]) {
-        this.refreshKey(key).catch(error => this.emit('error', { key, error }))
+        this.refreshKey(key).catch((error) =>
+          this.emit('error', { key, error })
+        )
       }
+    })
+
+    return new Proxy(this, {
+      get: function (target, prop) {
+        if (target[prop]) {
+          return target[prop]
+        }
+
+        return target.get(prop)
+      },
     })
   }
 
@@ -69,9 +81,9 @@ class ConfigStore extends EventEmitter {
         ? this.configResolvers[key].ttl
         : this.keyTtl
 
-    return promiseRetry(retry => func().catch(retry), {
-      retries: this.keyRefreshRetries
-    }).then(result => {
+    return promiseRetry((retry) => func().catch(retry), {
+      retries: this.keyRefreshRetries,
+    }).then((result) => {
       if (typeof mapper === 'function') {
         this.cache.set(key, mapper(result))
         return
