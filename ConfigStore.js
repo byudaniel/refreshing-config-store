@@ -35,6 +35,7 @@ class ConfigStore extends EventEmitter {
   #keyTtl = 0
   #keyRefreshRetries = 10
   #configResolvers = null
+  #proxiedThis = null
 
   constructor({
     staticConfig,
@@ -63,7 +64,7 @@ class ConfigStore extends EventEmitter {
       }
     })
 
-    return new Proxy(this, {
+    this.#proxiedThis = new Proxy(this, {
       get: function (target, prop) {
         if (target[prop] !== undefined) {
           return target[prop].bind(target)
@@ -72,6 +73,8 @@ class ConfigStore extends EventEmitter {
         return target.get(prop)
       },
     })
+
+    return this.#proxiedThis
   }
 
   init() {
@@ -92,7 +95,7 @@ class ConfigStore extends EventEmitter {
       retries: this.#keyRefreshRetries,
     }).then((result) => {
       if (typeof mapper === 'function') {
-        this.#cache.set(key, mapper(result, this))
+        this.#cache.set(key, mapper(result, this.#proxiedThis))
         return
       }
       this.#cache.set(key, result, ttl)
