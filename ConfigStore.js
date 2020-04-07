@@ -92,7 +92,7 @@ class ConfigStore extends EventEmitter {
       retries: this.#keyRefreshRetries,
     }).then((result) => {
       if (typeof mapper === 'function') {
-        this.#cache.set(key, mapper(result))
+        this.#cache.set(key, mapper(result, this))
         return
       }
       this.#cache.set(key, result, ttl)
