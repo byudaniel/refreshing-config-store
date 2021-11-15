@@ -10,21 +10,22 @@ const resolver = async () => {
 
   return {
     key2: '2:' + time,
-    key3: '3:' + time
+    key3: '3:' + time,
   }
 }
 
 const config = new ConfigStore({
   staticConfig: {
-    key1: '123'
+    key1: '123',
   },
   configResolvers: {
-    key2: { resolver, mapper: result => result.key2 },
-    key3: { resolver, mapper: result => result.key3 }
+    key2: { resolver, mapper: (result) => result.key2 },
+    key3: { resolver, mapper: (result) => result.key3 },
   },
+  spreadResolvers: [async () => ({ key4: 4, key5: 5 })],
   log: {
-    error: console.log
-  }
+    error: console.log,
+  },
 })
 
 config.on('error', ({ key, error }) => {
@@ -35,3 +36,5 @@ config
   .init()
   .then(() => console.log(config.get('key2')))
   .then(() => console.log(config.get('key3')))
+  .then(() => console.log(config.get('key4')))
+  .then(() => console.log(config.get('key5')))

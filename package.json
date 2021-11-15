@@ -1,6 +1,6 @@
 {
   "name": "@byudaniel/refreshing-config-store",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": false,
   "main": "ConfigStore.js",
   "scripts": {

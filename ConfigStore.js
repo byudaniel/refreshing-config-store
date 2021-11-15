@@ -36,10 +36,12 @@ class ConfigStore extends EventEmitter {
   #keyRefreshRetries = 10
   #configResolvers = null
   #proxiedThis = null
+  #spreadResolvers = []
 
   constructor({
     staticConfig,
     configResolvers,
+    spreadResolvers,
     defaultTtl = DEFAULT_KEY_TTL,
     keyCheckPeriod,
     keyRefreshRetries = 10,
@@ -55,12 +57,20 @@ class ConfigStore extends EventEmitter {
     })
     this.#staticConfig = staticConfig || {}
     this.#configResolvers = debounceConfigResolvers(configResolvers)
+    this.#spreadResolvers = spreadResolvers || []
 
     this.#cache.on('expired', (key) => {
       if (configResolvers[key]) {
         this[refreshKey](key).catch((error) =>
           this.emit('error', { key, error })
         )
+      } else {
+        this.#spreadResolvers.forEach(async (resolver) => {
+          const result = await resolver()
+          Object.entries(result).forEach(([key, value]) =>
+            this.set(key, value, this.#keyTtl)
+          )
+        })
       }
     })
 
@@ -77,10 +87,26 @@ class ConfigStore extends EventEmitter {
     return this.#proxiedThis
   }
 
-  init() {
-    return Promise.all(
-      Object.keys(this.#configResolvers).map(this[refreshKey].bind(this))
-    )
+  async init() {
+    if (!this.isInitializing) {
+      try {
+        this.isInitializing = true
+        await Promise.all([
+          ...Object.keys(this.#configResolvers).map(
+            this[refreshKey].bind(this)
+          ),
+          ...this.#spreadResolvers.map(async (resolver) => {
+            const result = await resolver()
+            Object.entries(result).forEach(([key, value]) =>
+              this.set(key, value, this.#keyTtl)
+            )
+          }),
+        ])
+      } catch (err) {
+        this.isInitializing = false
+        throw err
+      }
+    }
   }
 
   [refreshKey](key) {
