@@ -37,6 +37,7 @@ class ConfigStore extends EventEmitter {
   #configResolvers = null
   #proxiedThis = null
   #spreadResolvers = []
+  #initPromise = null
 
   constructor({
     staticConfig,
@@ -87,26 +88,23 @@ class ConfigStore extends EventEmitter {
     return this.#proxiedThis
   }
 
-  async init() {
-    if (!this.isInitializing) {
-      try {
-        this.isInitializing = true
-        await Promise.all([
-          ...Object.keys(this.#configResolvers).map(
-            this[refreshKey].bind(this)
-          ),
-          ...this.#spreadResolvers.map(async (resolver) => {
-            const result = await resolver()
-            Object.entries(result).forEach(([key, value]) =>
-              this.set(key, value, this.#keyTtl)
-            )
-          }),
-        ])
-      } catch (err) {
-        this.isInitializing = false
+  init() {
+    if (!this.#initPromise) {
+      this.#initPromise = Promise.all([
+        ...Object.keys(this.#configResolvers).map(this[refreshKey].bind(this)),
+        ...this.#spreadResolvers.map(async (resolver) => {
+          const result = await resolver()
+          Object.entries(result).forEach(([key, value]) =>
+            this.set(key, value, this.#keyTtl)
+          )
+        }),
+      ]).catch((err) => {
+        this.#initPromise = null
         throw err
-      }
+      })
     }
+
+    return this.#initPromise
   }
 
   [refreshKey](key) {
